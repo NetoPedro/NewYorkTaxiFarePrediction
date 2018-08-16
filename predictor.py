@@ -3,9 +3,10 @@ import numpy as np
 import re
 
 chunksize = 10 ** 5
-train_set = pandas.read_csv("./dataset/train.csv",nrows=10 ** 7)
+train_set = pandas.read_csv("./dataset/train.csv",nrows=10 ** 6)
 test_set = pandas.read_csv("./dataset/test.csv")
 
+print(train_set.info())
 print(train_set.describe())
 from sklearn.base import BaseEstimator, TransformerMixin
 
@@ -67,13 +68,27 @@ class CategorizePickupTime(BaseEstimator,TransformerMixin):
         return X
 
 from sklearn.preprocessing import Imputer
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
 from sklearn.pipeline import FeatureUnion
 pipeline_num = Pipeline([
     ("imputer", Imputer(strategy="mean")),
-    ("distance_creator",CreateDistance),
-    ("inmputer")
+    ("distance_creator",CreateDistance()),
+    ("scaler", StandardScaler())
 ])
+
+pipeline_cat = Pipeline([
+    ("time_category_creator",CategorizePickupTime()),
+    ("HotEncoder",OneHotEncoder())
+])
+
+final_pipeline = FeatureUnion([
+    ("num_pipeline", pipeline_num),
+    ("cat_pipelone",pipeline_cat)
+])
+
+
 
 '''
 train_set["pickup_datetime"] = (train_set["pickup_datetime"].str.extract('( ..)', expand=True).astype(int))
