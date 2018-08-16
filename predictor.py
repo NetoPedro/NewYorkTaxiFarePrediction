@@ -2,8 +2,8 @@ import pandas
 import numpy as np
 import re
 
-chunksize = 10 ** 5
-train_set = pandas.read_csv("./dataset/train.csv",nrows=10 ** 6)
+chunksize = 10 ** 4
+train_set = pandas.read_csv("./dataset/train.csv",nrows=chunksize)
 test_set = pandas.read_csv("./dataset/test.csv")
 
 print(train_set.info())
@@ -109,3 +109,21 @@ X_train = final_pipeline.fit_transform(X_train)
 X_test = X_train[chunksize:]
 X_train = X_train[:chunksize]
 
+from sklearn.svm  import SVR
+from sklearn.model_selection import GridSearchCV
+
+
+grid_params = [{"C":[0.2,0.4,0.6,0.8,1,1.2,1.4],"epsilon":[0.01,0.03,0.05,0.07,0.1,0.12,0.14],"kernel":["linear","poly","rbf","sigmoid"]}]
+svm = SVR()
+grid_svm = GridSearchCV(svm,param_grid=grid_params,scoring="neg_mean_squared_error",verbose=3,cv=3)
+
+grid_svm.fit(X_train,y_train)
+
+print(grid_svm.best_estimator_)
+print(grid_svm.best_score_)
+
+y_pred = grid_svm.predict(X_test)
+
+
+submissions = pandas.DataFrame(y_pred, index=test_set.key,columns=["fare_amount"])
+submissions.to_csv('./submission.csv', index=True)
