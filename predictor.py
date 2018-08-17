@@ -3,7 +3,7 @@ import numpy as np
 import re
 import multiprocessing
 
-chunksize = (10 ** 4)
+chunksize = (10 ** 6) * 2
 train_set = pandas.read_csv("./dataset/train.csv",nrows=chunksize)
 test_set = pandas.read_csv("./dataset/test.csv")
 
@@ -130,7 +130,7 @@ print(grid_svm.best_score_)
 
 y_pred = grid_svm.predict(X_test)
 '''
-grid_params = {'solver': ['lbfgs'], 'max_iter': [10000], 'alpha': [0.001],"learning_rate":["constant"],"activation":["relu"], 'hidden_layer_sizes':np.arange(8, 12), 'random_state':[42]}
+grid_params = {'solver': ['lbfgs'], 'max_iter': [100000], 'alpha': [0.001],"learning_rate":["constant"],"activation":["relu"], 'hidden_layer_sizes':np.arange(23, 25), 'random_state':[42]}
 nn = MLPRegressor()
 grid_nn = GridSearchCV(nn, param_grid=grid_params, scoring="neg_mean_squared_error", verbose=3, cv=3, n_jobs=-1)
 
