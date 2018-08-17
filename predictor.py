@@ -1,8 +1,9 @@
 import pandas
 import numpy as np
 import re
+import multiprocessing
 
-chunksize = 10 ** 4
+chunksize = (10 ** 4)
 train_set = pandas.read_csv("./dataset/train.csv",nrows=chunksize)
 test_set = pandas.read_csv("./dataset/test.csv")
 
@@ -40,6 +41,9 @@ class CreateDistance(BaseEstimator,TransformerMixin):
 
         X["distance"] = R * c
         X = X.drop(["pickup_latitude","pickup_longitude","dropoff_longitude","dropoff_latitude"],axis=1)
+        X.loc[X["passenger_count"] < 5, "passenger_count"] = 0
+        X.loc[X["passenger_count"] >= 5, "passenger_count"] = 1
+
         return np.c_[X]
 
 class CategorizePickupTime(BaseEstimator,TransformerMixin):
@@ -48,6 +52,7 @@ class CategorizePickupTime(BaseEstimator,TransformerMixin):
     def fit(self, X, y= None): return self
 
     def transform(self, X, y= None):
+        X["weekday"] = pandas.to_datetime(X['pickup_datetime'].str.replace(" UTC", ""), format='%Y-%m-%d %H:%M:%S').dt.weekday
         X["pickup_datetime"] = (X["pickup_datetime"].str.extract('( ..)', expand=True).astype(int))
         by_hour = X["pickup_datetime"].value_counts()
 
@@ -73,6 +78,7 @@ class CategorizePickupTime(BaseEstimator,TransformerMixin):
                 X.loc[X["pickup_datetime"] == int(entry[0]), "pickup_datetime"] = -2
 
         X["pickup_datetime"] = X["pickup_datetime"] * -1
+
         return np.c_[X]
 
 from sklearn.preprocessing import Imputer
@@ -111,9 +117,9 @@ X_train = X_train[:chunksize]
 
 from sklearn.svm  import SVR
 from sklearn.model_selection import GridSearchCV
+from sklearn.neural_network import MLPRegressor
 
-
-grid_params = [{"C":[0.2,0.4,0.6,0.8,1,1.2,1.4],"epsilon":[0.01,0.03,0.05,0.07,0.1,0.12,0.14],"kernel":["linear","poly","rbf","sigmoid"]}]
+'''grid_params = [{"C":[0.2,0.4,0.6,0.8,1,1.2,1.4],"epsilon":[0.01,0.03,0.05,0.07,0.1,0.12,0.14],"kernel":["linear","poly","rbf","sigmoid"]}]
 svm = SVR()
 grid_svm = GridSearchCV(svm,param_grid=grid_params,scoring="neg_mean_squared_error",verbose=3,cv=3)
 
@@ -123,6 +129,17 @@ print(grid_svm.best_estimator_)
 print(grid_svm.best_score_)
 
 y_pred = grid_svm.predict(X_test)
+'''
+grid_params = {'solver': ['lbfgs'], 'max_iter': [10000], 'alpha': [0.001],"learning_rate":["constant"],"activation":["relu"], 'hidden_layer_sizes':np.arange(8, 12), 'random_state':[42]}
+nn = MLPRegressor()
+grid_nn = GridSearchCV(nn, param_grid=grid_params, scoring="neg_mean_squared_error", verbose=3, cv=3, n_jobs=-1)
+
+grid_nn.fit(X_train, y_train.values.ravel())
+
+print(grid_nn.best_estimator_)
+print(grid_nn.best_score_)
+
+y_pred = grid_nn.predict(X_test)
 
 
 submissions = pandas.DataFrame(y_pred, index=test_set.key,columns=["fare_amount"])
